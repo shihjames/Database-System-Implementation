@@ -410,30 +410,6 @@ void MyDB_BufferManager ::handlePage(MyDB_Page &handleMe)
 	delete page->second;
 }
 
-MyDB_BufferManager ::MyDB_BufferManager(size_t page_size, size_t num_pages, string temp_file)
-{
-	pageSize = page_size;
-	numPages = num_pages;
-	tempFile = temp_file;
-
-	for (size_t page = 0; page < numPages; ++page)
-	{
-		availableBuffer.push_back(malloc(pageSize));
-	}
-	armPos = recentAccessed.end();
-	anonyPageID = 0;
-}
-
-MyDB_BufferManager ::~MyDB_BufferManager()
-{
-	for (size_t page = 0; page < numPages; ++page)
-	{
-		free(availableBuffer[page]);
-	}
-	// unlike tempFile
-	unlink(tempFile.c_str());
-}
-
 size_t MyDB_BufferManager ::getPageSize()
 {
 	return pageSize;
@@ -462,6 +438,30 @@ vector<void *> MyDB_BufferManager ::getAvailablebuffer()
 map<pair<MyDB_TablePtr, long>, MyDB_Page *> MyDB_BufferManager ::getRecentAccessed()
 {
 	return this->recentAccessed;
+}
+
+MyDB_BufferManager ::MyDB_BufferManager(size_t page_size, size_t num_pages, string temp_file)
+{
+	pageSize = page_size;
+	numPages = num_pages;
+	tempFile = temp_file;
+
+	for (size_t page = 0; page < numPages; ++page)
+	{
+		availableBuffer.push_back(malloc(pageSize));
+	}
+	armPos = recentAccessed.end();
+	anonyPageID = 0;
+}
+
+MyDB_BufferManager ::~MyDB_BufferManager()
+{
+	for (size_t page = 0; page < numPages; ++page)
+	{
+		free(availableBuffer[page]);
+	}
+	// unlike tempFile
+	unlink(tempFile.c_str());
 }
 
 #endif
