@@ -1,0 +1,12 @@
+{
+	"C_Cpp.errorSquiggles": "disabled",
+	"files.associations": {
+		"*.c": "c",
+		"set": "cpp",
+		"unordered_set": "cpp",
+		"ostream": "cpp",
+		"fstream": "cpp",
+		"locale": "cpp",
+		"vector": "cpp"
+	}
+}
