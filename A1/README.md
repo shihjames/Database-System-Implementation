@@ -15,8 +15,6 @@ Building up the prototype of Buffer Manager, Buffer Handles, and Page.
 ## Usage
 
 ```cpp
-import foobar
-
 // create a buffer manager
 MyDB_BufferManager myMgr (64, 16, "tempDSFSD");
 MyDB_TablePtr table1 = make_shared <MyDB_Table> ("tempTable", "foobar");
