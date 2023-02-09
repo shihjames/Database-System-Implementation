@@ -2,7 +2,7 @@
 
 Author: James Shih
 
-## Project Description
+## Project Part 1 Description
 
 Building up the prototype of Buffer Manager, Buffer Handles, and Page.
 
