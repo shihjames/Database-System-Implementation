@@ -4,10 +4,15 @@
 
 #include <iostream>
 #include <fstream>
-#include <sstream>
+#include <limits>
+#include <queue>
 #include "MyDB_PageReaderWriter.h"
-#include "MyDB_TableReaderWriter.h"
 #include "MyDB_TableRecIterator.h"
+#include "MyDB_TableRecIteratorAlt.h"
+#include "MyDB_TableReaderWriter.h"
+#include <set>
+#include <vector>
+// #include "Sorting.h"
 
 using namespace std;
 
@@ -95,10 +100,21 @@ MyDB_RecordIteratorPtr MyDB_TableReaderWriter ::getIterator(MyDB_RecordPtr recIt
 	return make_shared<MyDB_TableRecIterator>(*this, myTable, recIter);
 }
 
+MyDB_RecordIteratorAltPtr MyDB_TableReaderWriter ::getIteratorAlt()
+{
+	return make_shared<MyDB_TableRecIteratorAlt>(*this, myTable);
+}
+
+MyDB_RecordIteratorAltPtr MyDB_TableReaderWriter ::getIteratorAlt(int lowPage, int highPage)
+{
+	return make_shared<MyDB_TableRecIteratorAlt>(*this, myTable, lowPage, highPage);
+}
+
 void MyDB_TableReaderWriter ::writeIntoTextFile(string filename)
 {
 	// possible for future unit test
-	ofstream file(filename);
+	ofstream file;
+	file.open(filename);
 	// open file
 	if (file.is_open())
 	{
@@ -109,9 +125,7 @@ void MyDB_TableReaderWriter ::writeIntoTextFile(string filename)
 		{
 			iterPtr->getNext();
 			// wrire text into file
-			ostringstream stream;
-			stream << recPtr;
-			file << stream.str() << endl;
+			file << recPtr << endl;
 		}
 
 		file.close();

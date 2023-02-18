@@ -3,15 +3,15 @@
 #define TABLE_RW_H
 
 #include <memory>
-#include "../../BufferMgr/headers/MyDB_BufferManager.h"
+#include "MyDB_BufferManager.h"
 #include "MyDB_Record.h"
 #include "MyDB_RecordIterator.h"
-// #include "MyDB_TableRecIterator.h"
+#include "MyDB_RecordIteratorAlt.h"
 #include "MyDB_Table.h"
-#include "MyDB_PageReaderWriter.h"
+#include <set>
+#include <vector>
 
 using namespace std;
-
 // create a smart pointer for the catalog
 class MyDB_TableReaderWriter;
 class MyDB_PageReaderWriter;
@@ -38,6 +38,15 @@ public:
 	// by iterateIntoMe
 	MyDB_RecordIteratorPtr getIterator(MyDB_RecordPtr iterateIntoMe);
 
+	// gets an instance of an alternate iterator over the table... this is an
+	// iterator that has the alternate getCurrent ()/advance () interface
+	MyDB_RecordIteratorAltPtr getIteratorAlt();
+
+	// gets an instance of an alternate iterator over the page; this iterator
+	// works on a range of pages in the file, and iterates from lowPage through
+	// highPage inclusive
+	MyDB_RecordIteratorAltPtr getIteratorAlt(int lowPage, int highPage);
+
 	// load a text file into this table... overwrites the current contents
 	void loadFromTextFile(string fromMe);
 
@@ -47,11 +56,20 @@ public:
 	// access the i^th page in this file
 	MyDB_PageReaderWriter operator[](size_t i);
 
+	// access the i^th page in this file... getting a pinned version of the page
+	MyDB_PageReaderWriter getPinned(size_t i);
+
 	// access the last page in the file
 	MyDB_PageReaderWriter last();
 
+	// get the number of pages in the file
+	int getNumPages();
+
 	// get pointer of buffer manager
 	MyDB_BufferManagerPtr getBufferMgr();
+
+	// gets the physical file for this guy
+	string getFileName();
 
 	// get table pointer
 	MyDB_TablePtr getTable();
