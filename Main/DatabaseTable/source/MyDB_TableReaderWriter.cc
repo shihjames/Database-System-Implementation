@@ -36,17 +36,17 @@ MyDB_TableReaderWriter ::MyDB_TableReaderWriter(MyDB_TablePtr tablePtr, MyDB_Buf
 }
 
 // get i-th pages
-MyDB_PageReaderWriter MyDB_TableReaderWriter ::operator[](size_t i)
+MyDB_PageReaderWriter MyDB_TableReaderWriter ::MyDB_TableReaderWriter ::operator[](size_t i)
 {
 	return *make_shared<MyDB_PageReaderWriter>(this->myBuffer, this->myTable, i);
 }
 
-MyDB_RecordPtr MyDB_TableReaderWriter ::getEmptyRecord()
+MyDB_RecordPtr MyDB_TableReaderWriter ::MyDB_TableReaderWriter ::getEmptyRecord()
 {
 	return make_shared<MyDB_Record>(this->myTable->getSchema());
 }
 
-MyDB_PageReaderWriter MyDB_TableReaderWriter ::last()
+MyDB_PageReaderWriter MyDB_TableReaderWriter ::MyDB_TableReaderWriter ::last()
 {
 	return *make_shared<MyDB_PageReaderWriter>(this->myBuffer, this->myTable, this->myTable->lastPage());
 }
@@ -136,6 +136,11 @@ void MyDB_TableReaderWriter ::writeIntoTextFile(string filename)
 	}
 }
 
+MyDB_PageReaderWriter MyDB_TableReaderWriter ::getPinned(size_t i)
+{
+	return MyDB_PageReaderWriter(true, myBuffer, myTable, i);
+}
+
 MyDB_BufferManagerPtr MyDB_TableReaderWriter ::getBufferMgr()
 {
 	return this->myBuffer;
@@ -144,6 +149,11 @@ MyDB_BufferManagerPtr MyDB_TableReaderWriter ::getBufferMgr()
 MyDB_TablePtr MyDB_TableReaderWriter ::getTable()
 {
 	return this->myTable;
+}
+
+int MyDB_TableReaderWriter ::getNumPages()
+{
+	return myTable->lastPage() + 1;
 }
 
 #endif
