@@ -15,6 +15,12 @@ public:
 
     bool hasNext() override;
 
+    // BEFORE a call to getNext (), a call to getCurrentPointer () will get the address
+    // of the record.  At a later time, it is then possible to reconstitute the record
+    // by calling MyDB_Record.fromBinary (obtainedPointer)... ASSUMING that the page
+    // that the record is located on has not been swapped out
+    void *getCurrentPointer() override;
+
     // constructor
     MyDB_PageRecIterator(MyDB_PageHandle myPageHandle, MyDB_RecordPtr myRecPtr);
 

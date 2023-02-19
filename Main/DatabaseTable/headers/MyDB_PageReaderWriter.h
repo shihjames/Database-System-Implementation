@@ -94,9 +94,6 @@ private:
 	// pointer to the buffer manager (provided by TableReaderWriter)
 	MyDB_TablePtr myTablePtr;
 
-	// page id (provided by TableReaderWriter)
-	long myPageID;
-
 	// page size
 	size_t pageSize;
 
