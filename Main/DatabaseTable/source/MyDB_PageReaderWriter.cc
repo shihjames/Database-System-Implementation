@@ -9,27 +9,65 @@
 #include "MyDB_PageListIteratorAlt.h"
 #include "RecordComparator.h"
 
-#define NUM_BYTES_USED *((size_t *)(myPageOverlay->offsetToNextUnwritten + sizeof(PageOverlay)))
+#define PAGE_TYPE *((MyDB_PageType *)((char *)myPageHandle->getBytes()))
+#define NUM_BYTES_USED *((size_t *)(((char *)myPageHandle->getBytes()) + sizeof(size_t)))
+#define NUM_BYTES_LEFT (pageSize - NUM_BYTES_USED)
+
+MyDB_PageReaderWriter ::MyDB_PageReaderWriter(MyDB_BufferManagerPtr myBufferMgr, MyDB_TablePtr myTablePtr, long myPageID)
+{
+
+	// get the actual page
+	myPageHandle = myBufferMgr->getPage(myTablePtr, myPageID);
+	pageSize = myBufferMgr->getPageSize();
+}
+
+MyDB_PageReaderWriter ::MyDB_PageReaderWriter(bool pinned, MyDB_BufferManagerPtr myBufferMgr, MyDB_TablePtr &myTablePtr, long myPageID)
+{
+
+	// get the actual page
+	if (pinned)
+	{
+		myPageHandle = myBufferMgr->getPinnedPage(myTablePtr, myPageID);
+	}
+	else
+	{
+		myPageHandle = myBufferMgr->getPage(myTablePtr, myPageID);
+	}
+	pageSize = myBufferMgr->getPageSize();
+}
+
+MyDB_PageReaderWriter ::MyDB_PageReaderWriter(MyDB_BufferManagerPtr myBufferMgr)
+{
+	myPageHandle = myBufferMgr->getPage();
+	pageSize = myBufferMgr->getPageSize();
+	clear();
+}
+
+MyDB_PageReaderWriter ::MyDB_PageReaderWriter(bool pinned, MyDB_BufferManagerPtr myBufferMgr)
+{
+
+	if (pinned)
+	{
+		myPageHandle = myBufferMgr->getPinnedPage();
+	}
+	else
+	{
+		myPageHandle = myBufferMgr->getPage();
+	}
+	pageSize = myBufferMgr->getPageSize();
+	clear();
+}
 
 void MyDB_PageReaderWriter ::clear()
 {
-	// set offsetToNextUnwritten to index 0
-	myPageOverlay->offsetToNextUnwritten = 0;
-	// set page type to RegularPage
-	setType(MyDB_PageType ::RegularPage);
-	// set dirty
+	NUM_BYTES_USED = 2 * sizeof(size_t);
+	PAGE_TYPE = MyDB_PageType ::RegularPage;
 	myPageHandle->wroteBytes();
 }
 
-MyDB_RecordIteratorPtr MyDB_PageReaderWriter ::getIterator(MyDB_RecordPtr myRecPtr)
+MyDB_PageType MyDB_PageReaderWriter ::getType()
 {
-	// create a share pointer to page record iterator
-	return make_shared<MyDB_PageRecIterator>(myPageHandle, myRecPtr);
-}
-
-MyDB_RecordIteratorAltPtr MyDB_PageReaderWriter ::getIteratorAlt()
-{
-	return make_shared<MyDB_PageRecIteratorAlt>(myPageHandle);
+	return PAGE_TYPE;
 }
 
 MyDB_RecordIteratorAltPtr getIteratorAlt(vector<MyDB_PageReaderWriter> &forUs)
@@ -37,52 +75,44 @@ MyDB_RecordIteratorAltPtr getIteratorAlt(vector<MyDB_PageReaderWriter> &forUs)
 	return make_shared<MyDB_PageListIteratorAlt>(forUs);
 }
 
-MyDB_PageType MyDB_PageReaderWriter ::getType()
+MyDB_RecordIteratorPtr MyDB_PageReaderWriter ::getIterator(MyDB_RecordPtr iterateIntoMe)
 {
-	return myPageOverlay->pageType;
+	return make_shared<MyDB_PageRecIterator>(myPageHandle, iterateIntoMe);
 }
 
-void MyDB_PageReaderWriter ::setType(MyDB_PageType pageTypeIn)
+MyDB_RecordIteratorAltPtr MyDB_PageReaderWriter ::getIteratorAlt()
 {
-	// set new page type
-	myPageOverlay->pageType = pageTypeIn;
-	// set dirty
+	return make_shared<MyDB_PageRecIteratorAlt>(myPageHandle);
+}
+
+void MyDB_PageReaderWriter ::setType(MyDB_PageType toMe)
+{
+	PAGE_TYPE = toMe;
 	myPageHandle->wroteBytes();
-}
-
-bool MyDB_PageReaderWriter ::append(MyDB_RecordPtr myRecordPtr)
-{
-	// get the record size from record pointer
-	size_t recordSize = myRecordPtr->getBinarySize();
-	// get the page size from buffer manager
-	size_t pageSize = this->myBufferMgr->getPageSize();
-	// count remaining size
-	size_t remainSize = pageSize - myPageOverlay->offsetToNextUnwritten - sizeof(PageOverlay);
-	// able to append record
-	if (recordSize < remainSize)
-	{
-		// write
-		myRecordPtr->toBinary(&(myPageOverlay->bytes[(myPageOverlay->offsetToNextUnwritten)]));
-		// update offsetToNextUnwritten
-		myPageOverlay->offsetToNextUnwritten += recordSize;
-		// set dirty
-		myPageHandle->wroteBytes();
-		return true;
-	}
-	// unable to append record
-	else
-	{
-		return false;
-	}
 }
 
 void *MyDB_PageReaderWriter ::appendAndReturnLocation(MyDB_RecordPtr appendMe)
 {
-	void *recLocation = myPageOverlay->offsetToNextUnwritten + sizeof(PageOverlay) + (char *)myPageHandle->getBytes();
+	void *recLocation = NUM_BYTES_USED + (char *)myPageHandle->getBytes();
 	if (append(appendMe))
 		return recLocation;
 	else
 		return nullptr;
+}
+
+bool MyDB_PageReaderWriter ::append(MyDB_RecordPtr appendMe)
+{
+
+	size_t recSize = appendMe->getBinarySize();
+	if (recSize > NUM_BYTES_LEFT)
+		return false;
+
+	// write at the end
+	void *address = myPageHandle->getBytes();
+	appendMe->toBinary(NUM_BYTES_USED + (char *)address);
+	NUM_BYTES_USED += recSize;
+	myPageHandle->wroteBytes();
+	return true;
 }
 
 void MyDB_PageReaderWriter ::
@@ -97,7 +127,7 @@ void MyDB_PageReaderWriter ::
 
 	// this basically iterates through all of the records on the page
 	int bytesConsumed = sizeof(size_t) * 2;
-	while (bytesConsumed != myPageOverlay->offsetToNextUnwritten + sizeof(PageOverlay))
+	while (bytesConsumed != NUM_BYTES_USED)
 	{
 		void *pos = bytesConsumed + (char *)temp;
 		positions.push_back(pos);
@@ -164,59 +194,6 @@ size_t MyDB_PageReaderWriter ::getPageSize()
 void *MyDB_PageReaderWriter ::getBytes()
 {
 	return myPageHandle->getBytes();
-}
-
-MyDB_PageReaderWriter ::MyDB_PageReaderWriter(MyDB_BufferManagerPtr bufferMgrIn, MyDB_TablePtr tablePtrIn, long pageIDIn) : myBufferMgr(bufferMgrIn), myTablePtr(tablePtrIn), myPageID(pageIDIn)
-{
-	// initialize page handler from getPage (non-anonymous, unpinned page)
-	this->myPageHandle = myBufferMgr->getPage(myTablePtr, myPageID);
-	// initialize pageoverlay from raw bytes
-	myPageOverlay = (PageOverlay *)myPageHandle->getBytes();
-	// get page size
-	pageSize = myBufferMgr->getPageSize();
-}
-
-MyDB_PageReaderWriter ::MyDB_PageReaderWriter(bool pinned, MyDB_BufferManagerPtr bufferMgrIn, MyDB_TablePtr &tablePtrIn, long pageIDIn) : myBufferMgr(bufferMgrIn), myTablePtr(tablePtrIn), myPageID(pageIDIn)
-{
-	if (pinned)
-	{
-		// initialize page handler from getPinnedPage (non-anonymous, pinned page)
-		this->myPageHandle = myBufferMgr->getPinnedPage(myTablePtr, myPageID);
-	}
-	else
-	{
-		// initialize page handler from getPage (non-anonymous, unpinned page)
-		this->myPageHandle = myBufferMgr->getPage(myTablePtr, myPageID);
-	}
-	// initialize pageoverlay from raw bytes
-	myPageOverlay = (PageOverlay *)myPageHandle->getBytes();
-	// get page size
-	pageSize = myBufferMgr->getPageSize();
-}
-
-MyDB_PageReaderWriter ::MyDB_PageReaderWriter(MyDB_BufferManagerPtr bufferMgrIn) : myBufferMgr(bufferMgrIn)
-{
-	// initialize page handler from getPage (anonymous, unpinned page)
-	this->myPageHandle = myBufferMgr->getPage(myTablePtr, myPageID);
-	// initialize pageoverlay from raw bytes
-	myPageOverlay = (PageOverlay *)myPageHandle->getBytes();
-	// get page size
-	pageSize = myBufferMgr->getPageSize();
-	clear();
-}
-
-MyDB_PageReaderWriter ::MyDB_PageReaderWriter(bool pinned, MyDB_BufferManagerPtr bufferMgrIn) : myBufferMgr(bufferMgrIn)
-{
-	if (pinned)
-	{
-		this->myPageHandle = myBufferMgr->getPinnedPage();
-	}
-	else
-	{
-		this->myPageHandle = myBufferMgr->getPage();
-	}
-	pageSize = myBufferMgr->getPageSize();
-	clear();
 }
 
 #endif

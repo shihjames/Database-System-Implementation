@@ -11,15 +11,15 @@
 using namespace std;
 
 // structure for page overlay
-struct PageOverlay
-{
-	// offset for next unwritten byte
-	unsigned offsetToNextUnwritten;
-	// type of the page
-	MyDB_PageType pageType;
-	// this is where the data will be
-	char bytes[0];
-};
+// struct PageOverlay
+// {
+// 	// offset for next unwritten byte
+// 	unsigned offsetToNextUnwritten;
+// 	// type of the page
+// 	MyDB_PageType pageType;
+// 	// this is where the data will be
+// 	char bytes[0];
+// };
 
 class MyDB_PageReaderWriter;
 typedef shared_ptr<MyDB_PageReaderWriter> MyDB_PageReaderWriterPtr;
@@ -102,9 +102,6 @@ private:
 
 	// page handle for handling wroteBytes() and getBytes()
 	MyDB_PageHandle myPageHandle;
-
-	// structure of page overlay
-	PageOverlay *myPageOverlay;
 };
 
 #endif
