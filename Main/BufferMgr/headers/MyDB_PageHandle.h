@@ -28,6 +28,10 @@ public:
 	// will never be written to disk.
 	void wroteBytes();
 
+	MyDB_Page *getPagePtr();
+
+	MyDB_BufferManager &getParent();
+
 	// There are no more references to the handle when this is called...
 	// this should decrmeent a reference count to the number of handles
 	// to the particular page that it references.  If the number of
@@ -35,11 +39,8 @@ public:
 	// become unpinned.
 	~MyDB_PageHandleBase();
 
-	// FEEL FREE TO ADD ADDITIONAL PUBLIC METHODS
 	// constructor
 	MyDB_PageHandleBase(MyDB_Page *newPage);
-
-	MyDB_Page *getPagePtr();
 
 private:
 	friend class MyDB_Page;

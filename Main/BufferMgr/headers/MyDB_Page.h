@@ -14,6 +14,12 @@ class MyDB_Page
 {
 
 public:
+    // build a page
+    MyDB_Page(MyDB_TablePtr whichTable, MyDB_BufferManager &bufferMgr, long pageID, bool isPinned, bool isAnony, bool isSet);
+
+    // destruct the page when no reference to this page
+    ~MyDB_Page();
+
     // access the raw byte of this page
     void *getBytes();
 
@@ -22,12 +28,6 @@ public:
 
     // increase or decrease the value of refCount
     void setRefCount(int decrease);
-
-    // build a page
-    MyDB_Page(MyDB_TablePtr whichTable, MyDB_BufferManager &bufferMgr, long pageID, bool isPinned, bool isAnony, bool isSet);
-
-    // destruct the page when no reference to this page
-    ~MyDB_Page();
 
     // set anonymous
     void setAnonymous(bool anonyStatus);
@@ -43,6 +43,9 @@ public:
 
     // get table
     MyDB_TablePtr getTable();
+
+    // get the parent
+    MyDB_BufferManager &getParent();
 
     // get pinned
     bool getPinned();

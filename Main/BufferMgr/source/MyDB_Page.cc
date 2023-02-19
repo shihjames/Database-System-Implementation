@@ -113,6 +113,10 @@ int MyDB_Page ::getRefCount()
     return this->refCount;
 }
 
+MyDB_BufferManager &MyDB_Page :: getParent () {
+	return bufferMgr;	
+}
+
 // build a page
 MyDB_Page ::MyDB_Page(MyDB_TablePtr currTable, MyDB_BufferManager &currBufferMgr, long ID, bool pinStatus, bool anonyStatus, bool setStatus)
     : pageID(ID), isAnony(anonyStatus), isPinned(pinStatus), isSet(setStatus), whichTable(currTable), bufferMgr(currBufferMgr)

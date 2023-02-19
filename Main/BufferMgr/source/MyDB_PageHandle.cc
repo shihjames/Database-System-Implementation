@@ -22,6 +22,11 @@ MyDB_Page *MyDB_PageHandleBase ::getPagePtr()
     return this->currentPage;
 }
 
+MyDB_BufferManager &MyDB_PageHandleBase ::getParent()
+{
+    return currentPage->getParent();
+}
+
 MyDB_PageHandleBase ::MyDB_PageHandleBase(MyDB_Page *newPage)
 {
     this->currentPage = newPage;

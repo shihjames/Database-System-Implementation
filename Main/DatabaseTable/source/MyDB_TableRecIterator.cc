@@ -1,39 +1,40 @@
 
-#ifndef TABLE_REC_ITER_CC
-#define TABLE_REC_ITER_CC
+#ifndef TABLE_REC_ITER_C
+#define TABLE_REC_ITER_C
 
 #include "MyDB_PageReaderWriter.h"
 #include "MyDB_TableRecIterator.h"
 
 void MyDB_TableRecIterator ::getNext()
 {
-    this->pageIter->getNext();
+    myIter->getNext();
+}
+
+void *MyDB_TableRecIterator ::getCurrentPointer()
+{
+    return myIter->getCurrentPointer();
 }
 
 bool MyDB_TableRecIterator ::hasNext()
 {
-    if (this->pageIter->hasNext())
-    {
+    if (myParent[curPage].getType() == MyDB_PageType ::RegularPage && myIter->hasNext())
         return true;
-    }
 
-    while (this->pageCnt < this->myTable->lastPage())
-    {
-        this->pageCnt += 1;
-        this->pageIter = this->myTableRW[this->pageCnt].getIterator(this->myRec);
-        if (this->pageIter->hasNext())
-        {
-            return true;
-        }
-    }
+    if (curPage == myTable->lastPage())
+        return false;
 
-    return false;
+    curPage++;
+    myIter = myParent[curPage].getIterator(myRec);
+    return hasNext();
 }
 
-MyDB_TableRecIterator ::MyDB_TableRecIterator(MyDB_TableReaderWriter &tableRWIn, MyDB_TablePtr tableIn, MyDB_RecordPtr recIn) : myTableRW(tableRWIn), myTable(tableIn), myRec(recIn)
+MyDB_TableRecIterator ::MyDB_TableRecIterator(MyDB_TableReaderWriter &myParent, MyDB_TablePtr myTableIn,
+                                              MyDB_RecordPtr myRecIn) : myParent(myParent)
 {
-    pageCnt = 0;
-    pageIter = myTableRW[pageCnt].getIterator(myRec);
+    myTable = myTableIn;
+    myRec = myRecIn;
+    curPage = 0;
+    myIter = myParent[curPage].getIterator(myRec);
 }
 
 MyDB_TableRecIterator ::~MyDB_TableRecIterator() {}

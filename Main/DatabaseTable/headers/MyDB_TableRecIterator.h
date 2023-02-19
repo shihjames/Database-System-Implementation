@@ -9,32 +9,33 @@
 
 class MyDB_TableRecIterator : public MyDB_RecordIterator
 {
+
 public:
+    // put the contents of the next record in the file/page into the iterator record
+    // this should be called BEFORE the iterator record is first examined
     void getNext() override;
 
+    // BEFORE a call to getNext (), a call to getCurrentPointer () will get the address
+    // of the record.  At a later time, it is then possible to reconstitute the record
+    // by calling MyDB_Record.fromBinary (obtainedPointer)... ASSUMING that the page
+    // that the record is located on has not been swapped out
+    void *getCurrentPointer() override;
+
+    // return true iff there is another record in the file/page
     bool hasNext() override;
 
-    // constructor
-    MyDB_TableRecIterator(MyDB_TableReaderWriter &, MyDB_TablePtr, MyDB_RecordPtr);
-
-    // destructor
+    // destructor and contructor
+    MyDB_TableRecIterator(MyDB_TableReaderWriter &myParent, MyDB_TablePtr myTableIn,
+                          MyDB_RecordPtr myRecIn);
     ~MyDB_TableRecIterator();
 
 private:
-    // table reader/writer
-    MyDB_TableReaderWriter &myTableRW;
+    MyDB_RecordIteratorPtr myIter;
+    int curPage;
 
-    // table pointer
+    MyDB_TableReaderWriter &myParent;
     MyDB_TablePtr myTable;
-
-    // starting position
     MyDB_RecordPtr myRec;
-
-    // cnt for the page during iteratipon
-    int pageCnt;
-
-    // recored iterator pointer
-    MyDB_RecordIteratorPtr pageIter;
 };
 
 #endif

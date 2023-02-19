@@ -11,27 +11,24 @@
 #include <set>
 #include <vector>
 
+// create a smart pointer for the table reader writer
 using namespace std;
-// create a smart pointer for the catalog
-class MyDB_TableReaderWriter;
 class MyDB_PageReaderWriter;
-// shared pointer of TableReaderWriter and PageReaderWriter
+class MyDB_TableReaderWriter;
 typedef shared_ptr<MyDB_TableReaderWriter> MyDB_TableReaderWriterPtr;
-typedef shared_ptr<MyDB_PageReaderWriter> MyDB_PageReaderWriterPtr;
 
 class MyDB_TableReaderWriter
 {
 
 public:
-	// create a table reader/writer for the specified table, using the specified
-	// buffer manager
-	MyDB_TableReaderWriter(MyDB_TablePtr, MyDB_BufferManagerPtr);
+	// create a table reader/writer
+	MyDB_TableReaderWriter(MyDB_TablePtr forMe, MyDB_BufferManagerPtr myBuffer);
 
 	// gets an empty record from this table
 	MyDB_RecordPtr getEmptyRecord();
 
 	// append a record to the table
-	void append(MyDB_RecordPtr appendMe);
+	virtual void append(MyDB_RecordPtr appendMe);
 
 	// return an itrator over this table... each time returnVal->next () is
 	// called, the resulting record will be placed into the record pointed to
@@ -47,8 +44,11 @@ public:
 	// highPage inclusive
 	MyDB_RecordIteratorAltPtr getIteratorAlt(int lowPage, int highPage);
 
-	// load a text file into this table... overwrites the current contents
-	void loadFromTextFile(string fromMe);
+	// load a text file into this table... this returns a pair where the first
+	// entry is a list of (approximate) distinct value counts for each of the
+	// attributes in the table, and the second entry is the number of tuples that
+	// have been loaded into the table
+	pair<vector<size_t>, size_t> loadFromTextFile(string fromMe);
 
 	// dump the contents of this table into a text file
 	void writeIntoTextFile(string toMe);
@@ -65,26 +65,21 @@ public:
 	// get the number of pages in the file
 	int getNumPages();
 
-	// get pointer of buffer manager
+	// get access to the buffer manager
 	MyDB_BufferManagerPtr getBufferMgr();
 
 	// gets the physical file for this guy
 	string getFileName();
 
-	// get table pointer
+	// gets the table object for this guy
 	MyDB_TablePtr getTable();
 
 private:
-	friend class MyDB_pageReaderWriter;
-
-	// shared pointer of PageReaderWriter for the last page
-	shared_ptr<MyDB_PageReaderWriter> lastPage;
-
-	// pointer to the table (provided by TableReaderWriter)
-	MyDB_TablePtr myTable;
-
-	// pointer to the buffer manager (provided by TableReaderWriter)
+	friend class MyDB_PageReaderWriter;
+	friend class MyDB_BPlusTreeReaderWriter;
+	MyDB_TablePtr forMe;
 	MyDB_BufferManagerPtr myBuffer;
+	shared_ptr<MyDB_PageReaderWriter> lastPage;
 };
 
 #endif

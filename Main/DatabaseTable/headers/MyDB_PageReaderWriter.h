@@ -9,18 +9,6 @@
 #include "MyDB_TableReaderWriter.h"
 
 using namespace std;
-
-// structure for page overlay
-// struct PageOverlay
-// {
-// 	// offset for next unwritten byte
-// 	unsigned offsetToNextUnwritten;
-// 	// type of the page
-// 	MyDB_PageType pageType;
-// 	// this is where the data will be
-// 	char bytes[0];
-// };
-
 class MyDB_PageReaderWriter;
 typedef shared_ptr<MyDB_PageReaderWriter> MyDB_PageReaderWriterPtr;
 
@@ -28,6 +16,18 @@ class MyDB_PageReaderWriter
 {
 
 public:
+	// constructor for a page in the same file as the parent
+	MyDB_PageReaderWriter(MyDB_TableReaderWriter &parent, int whichPage);
+
+	// constructor for a page that can be pinned, if desired
+	MyDB_PageReaderWriter(bool pinned, MyDB_TableReaderWriter &parent, int whichPage);
+
+	// constructor for an anonymous page
+	MyDB_PageReaderWriter(MyDB_BufferManager &parent);
+
+	// constructor for an anonymous page that can be pinned, if desired
+	MyDB_PageReaderWriter(bool pinned, MyDB_BufferManager &parent);
+
 	// empties out the contents of this page, so that it has no records in it
 	// the type of the page is set to MyDB_PageType :: RegularPage
 	void clear();
@@ -75,30 +75,15 @@ public:
 	// returns the actual bytes
 	void *getBytes();
 
-	// constructor for a page in the same file as the parent
-	MyDB_PageReaderWriter(MyDB_BufferManagerPtr myBufferMgr, MyDB_TablePtr myTablePtr, long myPageID);
-
-	// constructor for a page that can be pinned, if desired
-	MyDB_PageReaderWriter(bool pinned, MyDB_BufferManagerPtr myBufferMgr, MyDB_TablePtr &myTablePtr, long myPageID);
-
-	// constructor for an anonymous page
-	MyDB_PageReaderWriter(MyDB_BufferManagerPtr myBufferMgr);
-
-	// constructor for an anonymous page that can be pinned, if desired
-	MyDB_PageReaderWriter(bool pinned, MyDB_BufferManagerPtr myBufferMgr);
-
 private:
-	// pointer to the buffer manager (provided by TableReaderWriter)
-	MyDB_BufferManagerPtr myBufferMgr;
+	// this is the page that we are messing with
+	MyDB_PageHandle myPage;
 
-	// pointer to the buffer manager (provided by TableReaderWriter)
-	MyDB_TablePtr myTablePtr;
-
-	// page size
+	// this is our buffer manager
 	size_t pageSize;
-
-	// page handle for handling wroteBytes() and getBytes()
-	MyDB_PageHandle myPageHandle;
 };
+
+// gets an instance of an alternatie iterator over a list of pages
+MyDB_RecordIteratorAltPtr getIteratorAlt(vector<MyDB_PageReaderWriter> &forUs);
 
 #endif

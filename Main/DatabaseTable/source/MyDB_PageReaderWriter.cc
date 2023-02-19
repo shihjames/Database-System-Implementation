@@ -9,52 +9,52 @@
 #include "MyDB_PageListIteratorAlt.h"
 #include "RecordComparator.h"
 
-#define PAGE_TYPE *((MyDB_PageType *)((char *)myPageHandle->getBytes()))
-#define NUM_BYTES_USED *((size_t *)(((char *)myPageHandle->getBytes()) + sizeof(size_t)))
+#define PAGE_TYPE *((MyDB_PageType *)((char *)myPage->getBytes()))
+#define NUM_BYTES_USED *((size_t *)(((char *)myPage->getBytes()) + sizeof(size_t)))
 #define NUM_BYTES_LEFT (pageSize - NUM_BYTES_USED)
 
-MyDB_PageReaderWriter ::MyDB_PageReaderWriter(MyDB_BufferManagerPtr myBufferMgr, MyDB_TablePtr myTablePtr, long myPageID)
+MyDB_PageReaderWriter ::MyDB_PageReaderWriter(MyDB_TableReaderWriter &parent, int whichPage)
 {
 
 	// get the actual page
-	myPageHandle = myBufferMgr->getPage(myTablePtr, myPageID);
-	pageSize = myBufferMgr->getPageSize();
+	myPage = parent.getBufferMgr()->getPage(parent.getTable(), whichPage);
+	pageSize = parent.getBufferMgr()->getPageSize();
 }
 
-MyDB_PageReaderWriter ::MyDB_PageReaderWriter(bool pinned, MyDB_BufferManagerPtr myBufferMgr, MyDB_TablePtr &myTablePtr, long myPageID)
+MyDB_PageReaderWriter ::MyDB_PageReaderWriter(bool pinned, MyDB_TableReaderWriter &parent, int whichPage)
 {
 
 	// get the actual page
 	if (pinned)
 	{
-		myPageHandle = myBufferMgr->getPinnedPage(myTablePtr, myPageID);
+		myPage = parent.getBufferMgr()->getPinnedPage(parent.getTable(), whichPage);
 	}
 	else
 	{
-		myPageHandle = myBufferMgr->getPage(myTablePtr, myPageID);
+		myPage = parent.getBufferMgr()->getPage(parent.getTable(), whichPage);
 	}
-	pageSize = myBufferMgr->getPageSize();
+	pageSize = parent.getBufferMgr()->getPageSize();
 }
 
-MyDB_PageReaderWriter ::MyDB_PageReaderWriter(MyDB_BufferManagerPtr myBufferMgr)
+MyDB_PageReaderWriter ::MyDB_PageReaderWriter(MyDB_BufferManager &parent)
 {
-	myPageHandle = myBufferMgr->getPage();
-	pageSize = myBufferMgr->getPageSize();
+	myPage = parent.getPage();
+	pageSize = parent.getPageSize();
 	clear();
 }
 
-MyDB_PageReaderWriter ::MyDB_PageReaderWriter(bool pinned, MyDB_BufferManagerPtr myBufferMgr)
+MyDB_PageReaderWriter ::MyDB_PageReaderWriter(bool pinned, MyDB_BufferManager &parent)
 {
 
 	if (pinned)
 	{
-		myPageHandle = myBufferMgr->getPinnedPage();
+		myPage = parent.getPinnedPage();
 	}
 	else
 	{
-		myPageHandle = myBufferMgr->getPage();
+		myPage = parent.getPage();
 	}
-	pageSize = myBufferMgr->getPageSize();
+	pageSize = parent.getPageSize();
 	clear();
 }
 
@@ -62,7 +62,7 @@ void MyDB_PageReaderWriter ::clear()
 {
 	NUM_BYTES_USED = 2 * sizeof(size_t);
 	PAGE_TYPE = MyDB_PageType ::RegularPage;
-	myPageHandle->wroteBytes();
+	myPage->wroteBytes();
 }
 
 MyDB_PageType MyDB_PageReaderWriter ::getType()
@@ -77,23 +77,23 @@ MyDB_RecordIteratorAltPtr getIteratorAlt(vector<MyDB_PageReaderWriter> &forUs)
 
 MyDB_RecordIteratorPtr MyDB_PageReaderWriter ::getIterator(MyDB_RecordPtr iterateIntoMe)
 {
-	return make_shared<MyDB_PageRecIterator>(myPageHandle, iterateIntoMe);
+	return make_shared<MyDB_PageRecIterator>(myPage, iterateIntoMe);
 }
 
 MyDB_RecordIteratorAltPtr MyDB_PageReaderWriter ::getIteratorAlt()
 {
-	return make_shared<MyDB_PageRecIteratorAlt>(myPageHandle);
+	return make_shared<MyDB_PageRecIteratorAlt>(myPage);
 }
 
 void MyDB_PageReaderWriter ::setType(MyDB_PageType toMe)
 {
 	PAGE_TYPE = toMe;
-	myPageHandle->wroteBytes();
+	myPage->wroteBytes();
 }
 
 void *MyDB_PageReaderWriter ::appendAndReturnLocation(MyDB_RecordPtr appendMe)
 {
-	void *recLocation = NUM_BYTES_USED + (char *)myPageHandle->getBytes();
+	void *recLocation = NUM_BYTES_USED + (char *)myPage->getBytes();
 	if (append(appendMe))
 		return recLocation;
 	else
@@ -108,10 +108,10 @@ bool MyDB_PageReaderWriter ::append(MyDB_RecordPtr appendMe)
 		return false;
 
 	// write at the end
-	void *address = myPageHandle->getBytes();
+	void *address = myPage->getBytes();
 	appendMe->toBinary(NUM_BYTES_USED + (char *)address);
 	NUM_BYTES_USED += recSize;
-	myPageHandle->wroteBytes();
+	myPage->wroteBytes();
 	return true;
 }
 
@@ -120,7 +120,7 @@ void MyDB_PageReaderWriter ::
 {
 
 	void *temp = malloc(pageSize);
-	memcpy(temp, myPageHandle->getBytes(), pageSize);
+	memcpy(temp, myPage->getBytes(), pageSize);
 
 	// first, read in the positions of all of the records
 	vector<void *> positions;
@@ -141,7 +141,7 @@ void MyDB_PageReaderWriter ::
 
 	// and write the guys back
 	NUM_BYTES_USED = 2 * sizeof(size_t);
-	myPageHandle->wroteBytes();
+	myPage->wroteBytes();
 	for (void *pos : positions)
 	{
 		lhs->fromBinary(pos);
@@ -162,7 +162,7 @@ MyDB_PageReaderWriterPtr MyDB_PageReaderWriter ::
 	int bytesConsumed = sizeof(size_t) * 2;
 	while (bytesConsumed != NUM_BYTES_USED)
 	{
-		void *pos = bytesConsumed + (char *)myPageHandle->getBytes();
+		void *pos = bytesConsumed + (char *)myPage->getBytes();
 		positions.push_back(pos);
 		void *nextPos = lhs->fromBinary(pos);
 		bytesConsumed += ((char *)nextPos) - ((char *)pos);
@@ -173,7 +173,7 @@ MyDB_PageReaderWriterPtr MyDB_PageReaderWriter ::
 	std::stable_sort(positions.begin(), positions.end(), myComparator);
 
 	// and now create the page to return
-	MyDB_PageReaderWriterPtr returnVal = make_shared<MyDB_PageReaderWriter>(myBufferMgr);
+	MyDB_PageReaderWriterPtr returnVal = make_shared<MyDB_PageReaderWriter>(myPage->getParent());
 	returnVal->clear();
 
 	// loop through all of the sorted records and write them out
@@ -193,7 +193,7 @@ size_t MyDB_PageReaderWriter ::getPageSize()
 
 void *MyDB_PageReaderWriter ::getBytes()
 {
-	return myPageHandle->getBytes();
+	return myPage->getBytes();
 }
 
 #endif
