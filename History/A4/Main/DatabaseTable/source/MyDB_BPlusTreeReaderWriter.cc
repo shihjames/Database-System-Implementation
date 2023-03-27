@@ -26,9 +26,9 @@ MyDB_BPlusTreeReaderWriter ::MyDB_BPlusTreeReaderWriter(string orderOnAttName, M
 
 MyDB_RecordIteratorAltPtr MyDB_BPlusTreeReaderWriter ::getSortedRangeIteratorAlt(MyDB_AttValPtr low, MyDB_AttValPtr high)
 {
-
 	vector<MyDB_PageReaderWriter> pageList;
 
+	// get all pages that is in the range
 	this->discoverPages(this->rootLocation, pageList, low, high);
 
 	MyDB_RecordPtr lhs = this->getEmptyRecord();
@@ -53,6 +53,7 @@ MyDB_RecordIteratorAltPtr MyDB_BPlusTreeReaderWriter ::getRangeIteratorAlt(MyDB_
 
 	vector<MyDB_PageReaderWriter> pageList;
 
+	// get all pages that is in the range
 	this->discoverPages(this->rootLocation, pageList, low, high);
 
 	MyDB_RecordPtr lhs = this->getEmptyRecord();
@@ -72,8 +73,7 @@ MyDB_RecordIteratorAltPtr MyDB_BPlusTreeReaderWriter ::getRangeIteratorAlt(MyDB_
 	return make_shared<MyDB_PageListIteratorSelfSortingAlt>(pageList, lhs, rhs, comparator, rec, lowComparator, highComparator, false);
 }
 
-bool MyDB_BPlusTreeReaderWriter ::discoverPages(int whichPage, vector<MyDB_PageReaderWriter> &list,
-												MyDB_AttValPtr low, MyDB_AttValPtr high)
+bool MyDB_BPlusTreeReaderWriter ::discoverPages(int whichPage, vector<MyDB_PageReaderWriter> &list, MyDB_AttValPtr low, MyDB_AttValPtr high)
 {
 	queue<int> q;
 	q.push(whichPage);
@@ -83,10 +83,12 @@ bool MyDB_BPlusTreeReaderWriter ::discoverPages(int whichPage, vector<MyDB_PageR
 		MyDB_PageReaderWriter curPage = this->operator[](q.front());
 		q.pop();
 
+		// leaf page -> push it into the queue
 		if (curPage.getType() == MyDB_PageType ::RegularPage)
 		{
 			list.push_back(curPage);
 		}
+		// internal page -> compare and search
 		else
 		{
 			MyDB_INRecordPtr lowIN = getINRecord();
