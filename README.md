@@ -2,7 +2,7 @@
 
 ## Author: James Shih
 
-This project provides a hands-on, in-depth exploration of database system internals.  Students will progressively implement core components of a database management system (DBMS), from low-level buffer and file management to high-level query processing and optimization.  The project culminates in integrating these components to create a functional, miniature database system.
+This project provides a hands-on, in-depth exploration of database system internals.
 
 * Buffer and File Management: Implemented efficient algorithms for managing data storage and retrieval, critical for optimizing database performance.
 * Record Manager: Designed and built a record manager to organize and access individual data records within the database, a fundamental component of DBMS architecture.
